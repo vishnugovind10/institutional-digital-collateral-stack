@@ -1,0 +1,30 @@
+{
+  "collateral": {
+    "asset_id": "UST-2026-A",
+    "eligible_value": 9800000,
+    "gross_value": 10000000,
+    "haircut": 0.02,
+    "status": "ELIGIBLE"
+  },
+  "evidence": {
+    "classification": "SELF_EVIDENT",
+    "status": "VERIFIED"
+  },
+  "integrity_hash": "12a3bbaf7ef08025dfc584b6f88793aa2fe58d2c1b6055870071c55fe0e14488",
+  "liquidity": {
+    "available": 9000000,
+    "peak_demand": 4200000,
+    "required": 8400000,
+    "status": "SUFFICIENT"
+  },
+  "observed_at": "2026-01-01T00:00:00Z",
+  "reconciliation": {
+    "status": "MATCHED"
+  },
+  "schema_version": "0.1",
+  "settlement": {
+    "finality": "ECONOMIC_FINAL",
+    "state": "EVIDENCE_VERIFIED"
+  },
+  "transaction_id": "COLL-2026-0001"
+}
