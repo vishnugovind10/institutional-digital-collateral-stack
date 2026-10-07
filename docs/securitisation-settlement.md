@@ -29,4 +29,3 @@ python -m digital_collateral.demo --scenario securitisation-reconciliation-diver
 ## Boundaries
 
 The scenario is synthetic and generic. It does not imply PwC partnership, PwC validation, access to PwC systems, production bank integration, regulatory certification, or replication of any proprietary securitisation settlement product.
-

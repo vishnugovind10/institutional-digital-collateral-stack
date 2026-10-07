@@ -98,4 +98,3 @@ Reconciliation Divergence {summary.reconciliation_divergence_rate:.1%}
 Control Plane Status:
 {summary.status}
 """
-

@@ -15,4 +15,3 @@ T+0 is not merely faster settlement. At sufficiently compressed windows, coordin
 ## Thesis
 
 At sufficiently compressed settlement windows, coordination, state agreement, liquidity timing, authorization, and evidence become first-class settlement infrastructure.
-

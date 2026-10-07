@@ -35,4 +35,3 @@ Failures are not collapsed into a boolean. The result includes category, code, f
 ## Boundaries
 
 The control plane does not connect to production custody systems, banks, market data, CSDs, blockchains, PwC systems, or auditors. It is a deterministic architecture harness for studying compressed institutional settlement.
-
