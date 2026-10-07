@@ -1,10 +1,10 @@
 cff-version: 1.2.0
 message: "If you use this reference architecture, please cite it as below."
 title: "institutional-digital-collateral-stack"
-version: "0.1.0"
-date-released: "2026-10-06"
+version: "0.2.0"
+date-released: "2026-10-07"
 url: "https://github.com/vishnugovind10/institutional-digital-collateral-stack"
-abstract: "Reference architecture and executable research implementation for 24/7 institutional digital collateral coordination."
+abstract: "Executable institutional settlement control-plane reference architecture for eligibility, valuation, custody authorization, DvP, temporal liquidity, reconciliation and evidence."
 authors:
   - family-names: "Govind"
     given-names: "Vishnu"

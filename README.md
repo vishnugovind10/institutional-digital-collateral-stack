@@ -3,137 +3,100 @@
 [![CI](https://github.com/vishnugovind10/institutional-digital-collateral-stack/actions/workflows/ci.yml/badge.svg)](https://github.com/vishnugovind10/institutional-digital-collateral-stack/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Version](https://img.shields.io/badge/version-0.2.0-blue)
 
-Institutional collateral infrastructure was built around settlement windows, operating hours, and fragmented system state. Tokenization can make collateral continuously mobile, but continuous mobility changes the failure surface: eligibility, custody authorization, DvP, liquidity timing, synchronization, reconciliation, and evidence become tightly coupled.
+**Institutional Settlement Control Plane.** This repository is an executable reference architecture for automating institutional settlement across eligibility, valuation, custody authorization, DvP, temporal liquidity, state synchronization, reconciliation, and deterministic evidence.
 
-This repository is a reference architecture and executable research implementation for studying that stack. It is not a bank system, custody system, trading system, regulated settlement venue, or audit product.
+The project explores how institutional settlement infrastructure changes as markets move from T+N to T+1, T+0, intraday, and continuous settlement. It uses synthetic deterministic data only. It does not implement a bank system, PwC system, custody platform, regulated settlement venue, audit product, or production financial integration.
 
 ## Problem
 
-Tokenizing collateral is necessary but insufficient. Once collateral can move continuously, the infrastructure must answer several questions at the same time:
+Tokenizing collateral is necessary but insufficient. As collateral and settlement workflows become more mobile, the binding risks shift from a single end-of-day settlement event to continuous coordination:
 
-- Is the asset eligible for this obligation?
-- What is it worth after valuation and haircut?
-- Is custody authorization current and valid?
-- Can the asset leg and cash leg settle together?
-- Does liquidity exist at the exact moment obligations synchronize?
-- Do relevant operational systems agree on the result?
-- What evidence can be produced without assuming global ledger visibility?
+- Is the obligation eligible for this asset pool?
+- Is the collateral value sufficient after haircut?
+- Is custody authorization fresh and non-conflicting?
+- Can asset and cash legs settle together?
+- Does liquidity exist at the exact time obligations synchronize?
+- Do operational ledgers agree after settlement?
+- What evidence can be produced without assuming global visibility?
 
-The repository makes those control surfaces executable with deterministic synthetic scenarios.
-
-## Why this matters
-
-Faster settlement does not remove operational risk. It can move the binding constraint from aggregate balance-sheet capacity to timing, state agreement, and evidence quality. The core demonstration here is:
-
-```text
-same collateral
-same total obligations
-different timing
-=> different settlement outcomes
-```
-
-## Architecture diagram
+## Architecture
 
 ```mermaid
 flowchart LR
-    M["Margin / Collateral Call"] --> E["Eligibility"]
+    O["Obligation"] --> E["Eligibility"]
     E --> V["Valuation + Haircut"]
     V --> C["Custody Authorization"]
-    C --> S["Settlement State Machine"]
-    S --> L["Temporal Liquidity Engine"]
-    L --> F["Finality / Synchronization"]
+    C --> S["DvP / Settlement State"]
+    S --> L["Temporal Liquidity"]
+    L --> F["State Synchronization / Finality"]
     F --> R["Reconciliation"]
-    R --> P["Evidence / Proof Pack"]
-    P --> A["Auditor / Observer"]
+    R --> P["Evidence / Proof"]
 ```
 
-Failure path:
+The control plane is intentionally thin. It composes the existing deterministic scenario runner, state machine, liquidity model, reconciliation check, evidence generator, and verifier. It does not introduce a monolithic orchestration class or external dependencies.
 
-```mermaid
-flowchart TD
-    A["Eligible collateral"] --> B["Settlement ready"]
-    B --> C["Synchronized liquidity demand"]
-    C --> D{"Liquidity available?"}
-    D -->|Yes| E["Settle"]
-    D -->|No| F["Exception / unwind"]
-    E --> G["Reconcile"]
-    F --> G
-    G --> H["Evidence"]
+## Why settlement compression matters
+
+Compressing settlement time does not eliminate operational risk; it changes where the binding constraints occur. A 30-day workflow can hide manual reconciliation and evidence collection. A T+0 or continuous workflow makes liquidity timing, authorization validity, state agreement, and evidence completeness first-class settlement infrastructure.
+
+The settlement-compression experiment models that transition using synthetic assumptions:
+
+```bash
+python -m digital_collateral.experiments.compression
 ```
 
-## What this demonstrates
+## What is implemented
 
-| Surface | Demonstrates | Does not demonstrate |
+| Surface | Implemented | Boundary |
 |---|---|---|
-| Collateral | Deterministic eligibility and valuation | Production market data |
-| Custody | Policy-gated authorization | HSM or MPC production deployment |
-| Settlement | Explicit DvP state transitions | Legal settlement finality |
-| Liquidity | Temporal concentration model | Full market liquidity simulation |
-| Reconciliation | Multi-state comparison | Enterprise reconciliation platform |
-| Evidence | Structured evidence artifact and hash integrity | Independent audit opinion |
-| Privacy | Bounded observer model | Real Canton production deployment |
+| Control plane | Obligation execution and aggregate summary | Reference orchestration only |
+| Eligibility | Deterministic policy checks | No production market data |
+| Valuation | Haircut and eligible value | No external pricing |
+| Custody | Authorization status and freshness | No HSM, MPC, or key control |
+| Settlement | Explicit DvP state transitions | No legal finality engine |
+| Liquidity | Temporal concentration and peak demand | No market-wide liquidity simulation |
+| Reconciliation | Ledger-state agreement check | No enterprise recon platform |
+| Evidence | Hash-bound JSON and verifier | No audit opinion |
+| Exceptions | Structured exception taxonomy | No live workflow routing |
 
-## What this does not demonstrate
+## Securitisation scenario
 
-This repository does not move real money, control real collateral, connect to bank systems, provide investment advice, produce an audit opinion, certify regulatory compliance, or prove legal finality. All values are synthetic and deterministic.
+The repository includes a generic synthetic securitisation settlement workflow:
 
-## Canonical scenario
+```text
+Originator -> Asset Pool -> Eligibility -> Valuation -> SPV / Issuer
+  -> Collateral Authorization -> Cash Leg -> DvP Settlement
+  -> Reconciliation -> Evidence
+```
 
-The default scenario is `24/7 Margin Collateral Mobilization`:
+Run it:
 
-1. A margin call arrives outside local banking hours.
-2. The stack identifies eligible tokenized treasury collateral.
-3. The valuation engine applies a haircut.
-4. Custody policy authorizes mobilization.
-5. The settlement state machine creates a DvP path.
-6. Liquidity demand is calculated.
-7. The temporal-liquidity engine evaluates timing concentration.
-8. Settlement succeeds or enters `EXCEPTION`.
-9. Reconciliation checks asset ledger, settlement ledger, and custody intent.
-10. Evidence is generated.
-11. The verifier checks hash integrity and false-verification boundaries.
+```bash
+python -m digital_collateral.demo --scenario securitisation-settlement
+python -m digital_collateral.demo --scenario securitisation-settlement-failure
+```
+
+This is independently designed synthetic infrastructure research. It does not reproduce, implement, validate, or claim access to any proprietary PwC or bank implementation.
 
 ## Failure scenarios
 
 | Scenario | Command | Expected outcome |
 |---|---|---|
-| Successful 24/7 settlement | `python -m digital_collateral.demo` | `EVIDENCE_VERIFIED` |
+| Successful 24/7 collateral settlement | `python -m digital_collateral.demo` | `EVIDENCE_VERIFIED` |
 | Temporal liquidity failure | `python -m digital_collateral.demo --scenario temporal-liquidity-failure` | `EXCEPTION` |
 | Staggered liquidity success | `python -m digital_collateral.demo --scenario staggered-success` | `EVIDENCE_VERIFIED` |
 | Cash-leg failure | `python -m digital_collateral.demo --scenario cash-leg-failure` | `EXCEPTION` |
 | Restricted collateral | `python -m digital_collateral.demo --scenario restricted-collateral` | `EXCEPTION` |
 | Reconciliation divergence | `python -m digital_collateral.demo --scenario reconciliation-divergence` | `EXCEPTION` |
 | Evidence incompleteness | `python -m digital_collateral.demo --scenario evidence-incomplete` | `ABSTAINED` |
-
-## Component map
-
-| Layer | Local component | Source reference | Role | Status |
-|---|---|---|---|---|
-| Asset | `CollateralAsset` | `tokenize-stack` | Tokenized/restricted asset representation | Implemented locally |
-| Valuation | `Valuation` and eligible value | `haircut` | Eligible collateral value | Adapted concept |
-| Custody | `CustodyAuthorization` | `tokenize-stack` | Mobilization permission | Implemented locally |
-| Settlement | `SettlementStateMachine` | `institutional-settlement-state-machine` | Lifecycle and DvP conditions | Adapted concept |
-| Liquidity | `LiquidityProfile` | `temporal-liquidity-risk` | Time-concentrated liquidity stress | Implemented locally |
-| Synchronization | `ObserverScope` | `canton-sync-debt-observatory` | Cross-partition state agreement | Conceptual mapping |
-| Evidence | Evidence artifact and verifier | `canton-proofpack` | Structured substantiation | Implemented locally |
-| Evidence extension | Evidence status vocabulary | `liquid-proofpack` | Scoped attestation model | Referenced |
-| Treasury context | Liquidity/cash surface | `arc-fintech-risk-layer` | Optional cash-context reference | Referenced |
-
-## Implementation status
-
-| Component | Status | Evidence |
-|---|---|---|
-| Scenario orchestration | Implemented | `tests/test_core.py` |
-| Eligibility and valuation | Implemented | Unit tests |
-| Custody authorization boundary | Implemented | Scenario tests |
-| Settlement transition invariants | Implemented | Invalid transition tests |
-| Temporal liquidity model | Implemented | Synchronized vs staggered tests |
-| Reconciliation divergence | Implemented | Divergence scenario |
-| Evidence generation and verification | Implemented | Tamper test |
-| External ledger adapters | Deferred | Explicit non-goal |
-| Production custody, bank, and market data integrations | Deferred | Explicit non-goal |
+| Securitisation success | `python -m digital_collateral.demo --scenario securitisation-settlement` | `EVIDENCE_VERIFIED` |
+| Securitisation liquidity failure | `python -m digital_collateral.demo --scenario securitisation-settlement-failure` | `EXCEPTION` |
+| Securitisation ineligible collateral | `python -m digital_collateral.demo --scenario securitisation-ineligible` | `EXCEPTION` |
+| Securitisation cash failure | `python -m digital_collateral.demo --scenario securitisation-cash-failure` | `EXCEPTION` |
+| Securitisation authorization failure | `python -m digital_collateral.demo --scenario securitisation-authorization-failure` | `EXCEPTION` |
+| Securitisation reconciliation divergence | `python -m digital_collateral.demo --scenario securitisation-reconciliation-divergence` | `EXCEPTION` |
 
 ## Quickstart
 
@@ -145,122 +108,80 @@ python -m pytest
 python -m digital_collateral.demo
 ```
 
-Run specific scenarios:
+Control-plane summary:
 
 ```bash
-python -m digital_collateral.demo --scenario temporal-liquidity-failure
-python -m digital_collateral.demo --scenario staggered-success
-python -m digital_collateral.demo --scenario evidence-incomplete --json
+python -m digital_collateral.demo --control-plane-summary
 ```
 
-## Demo output
+Compression experiment:
 
-Expected default shape:
+```bash
+python -m digital_collateral.experiments.compression
+```
+
+## Control-plane summary output
+
+The summary is computed from deterministic scenario results:
 
 ```text
-INSTITUTIONAL DIGITAL COLLATERAL STACK
+INSTITUTIONAL SETTLEMENT CONTROL PLANE
 --------------------------------------
 
-Collateral:
-  status: ELIGIBLE
-  gross value: 10,000,000
-  haircut: 2.0%
-  eligible value: 9,800,000
+Obligations                 6
+Settlement Ready            3
+Settling                    0
+Exceptions                  2
 
-Liquidity:
-  required aggregate: 8,400,000
-  peak demand: 4,200,000
-  available: 9,000,000
-  temporal concentration: MODERATE
+Collateral Value        175,000,000
+Eligible Value          166,500,000
+Liquidity Available     127,000,000
+Peak Liquidity Demand   66,800,000
 
-Outcome:
-  EVIDENCE_VERIFIED
+Settlement Success      50.0%
+Evidence Verified       50.0%
+Reconciliation Divergence 16.7%
+
+Control Plane Status:
+DEGRADED
 ```
 
-## Risk / liquidity model
+## Exception control model
 
-The liquidity model keeps the `temporal-liquidity-risk` insight visible:
+Failures are structured by category and code:
 
-```text
-required_liquidity = obligation_amount * reuse_depth * shock
-```
+| Category | Codes |
+|---|---|
+| Asset | `INELIGIBLE`, `INSUFFICIENT_VALUE`, `RESTRICTED` |
+| Custody | `AUTHORIZATION_EXPIRED`, `AUTHORIZATION_CONFLICT` |
+| Liquidity | `INSUFFICIENT_LIQUIDITY`, `TEMPORAL_CONCENTRATION` |
+| State | `LEDGER_DIVERGENCE`, `STALE_OBSERVER` |
+| Settlement | `DVP_FAILURE`, `FINALITY_FAILURE` |
+| Evidence | `EVIDENCE_INCOMPLETE`, `EVIDENCE_TAMPERED`, `OBSERVATION_HORIZON_EXCEEDED` |
 
-Aggregate required liquidity is not the same as peak demand. The system compares available liquidity to the peak interval demand.
+Each exception carries the failed control point, reason, recoverability, escalation requirement, and evidence availability.
 
-| Case | Collateral | Obligations | Available liquidity | Timing | Peak demand | Outcome |
-|---|---:|---:|---:|---|---:|---|
-| Staggered | 10,000,000 | 8,000,000 | 8,000,000 | Two intervals | 4,200,000 | Success |
-| Synchronized | 10,000,000 | 8,000,000 | 8,000,000 | One interval | 8,400,000 | Failure |
+## Benchmark
 
-## Settlement state model
+| Control | Traditional workflow | Automated control plane |
+|---|---|---|
+| Eligibility | Manual or batch review | Event-driven policy check |
+| Valuation | Periodic valuation cycle | Deterministic haircut function |
+| Authorization | Operational workflow | Policy-controlled authorization state |
+| Liquidity | Periodic funding planning | Temporal peak-demand evaluation |
+| Settlement | Batch instruction lifecycle | State-machine driven DvP path |
+| Reconciliation | Post-event comparison | Event-driven ledger-state comparison |
+| Evidence | Manual compilation | Machine-generated evidence artifact |
 
-| Current State | Event | Condition | Next State |
-|---|---|---|---|
-| `TRADE_CONFIRMED` | compliance-check | approved | `COMPLIANCE_APPROVED` |
-| `COMPLIANCE_APPROVED` | eligibility-check | eligible | `COLLATERAL_ELIGIBLE` |
-| `COLLATERAL_ELIGIBLE` | asset-check | available | `ASSET_AVAILABLE` |
-| `ASSET_AVAILABLE` | cash-check | available | `CASH_AVAILABLE` |
-| `CASH_AVAILABLE` | authorize | policy passes | `CUSTODY_AUTHORIZED` |
-| `CUSTODY_AUTHORIZED` | liquidity-check | sufficient | `SETTLEMENT_READY` |
-| `SETTLEMENT_READY` | execute | DvP passes | `SETTLING` |
-| `SETTLING` | finality | final | `SETTLED` |
-| `SETTLED` | reconcile | matched | `RECONCILIATION_PENDING` |
-| `RECONCILIATION_PENDING` | reconcile | matched | `RECONCILED` |
-| `RECONCILED` | evidence-check | complete | `EVIDENCE_VERIFIED` |
-| `SETTLEMENT_READY` | liquidity-failure | insufficient | `EXCEPTION` |
-| `RECONCILED` | evidence-check | incomplete | `ABSTAINED` |
-
-Operational completion, economic finality, reconciliation, and evidence are distinct dimensions.
-
-## Evidence model
-
-Evidence is machine-readable and hash-bound:
-
-```json
-{
-  "schema_version": "0.1",
-  "transaction_id": "COLL-2026-0001",
-  "collateral": {
-    "asset_id": "UST-2026-A",
-    "gross_value": 10000000,
-    "haircut": 0.02,
-    "eligible_value": 9800000,
-    "status": "ELIGIBLE"
-  },
-  "liquidity": {
-    "required": 8400000,
-    "peak_demand": 4200000,
-    "available": 9000000,
-    "status": "SUFFICIENT"
-  },
-  "evidence": {
-    "status": "VERIFIED",
-    "classification": "SELF_EVIDENT"
-  }
-}
-```
-
-The verifier never reports `VERIFIED` for trust-only, incomplete, replay-only, or beyond-horizon evidence.
-
-## Repository composition
-
-```text
-src/digital_collateral/   reference implementation
-tests/                    unit, scenario, invariant, and adversarial checks
-docs/                     architecture details and threat model
-examples/                 deterministic evidence outputs
-scripts/                  publication validation
-```
-
-## Relationship to source repositories
-
-This repository is not a merge of the source repositories. It is a thin integration thesis that defines common interfaces, runs deterministic scenarios, and links the source projects as deeper component references.
+The table is a conceptual benchmark. It is not a production performance claim.
 
 ## Research motivation
 
-Citi's research page, [Digital Collateral: A Practical Reality](https://www.citigroup.com/global/insights/digital-collateral-a-practical-reality), describes institutional movement toward practical digital-collateral workflows. This repository uses that public research as problem framing only. It does not imply Citi endorsement, partnership, deployment, or access to Citi systems.
+Public industry material describes rising pressure toward settlement automation, T+1 readiness, and more continuous digital-asset infrastructure. The PwC Germany press announcement on automated settlement in securitisations is used as external context only: https://www.pwc.de/de/pressemitteilungen/2026/von-30-tagen-auf-einen-tag-pwc-stellt-neue-loesung-fuer-automatisiertes-settlement-in-verbriefungen-vor.html
 
-## Related Implementations
+This repository does not implement PwC's system, replicate proprietary technology, imply PwC validation, or claim access to PwC systems.
+
+## Related implementations
 
 - [tokenize-stack](https://github.com/vishnugovind10/tokenize-stack)
 - [temporal-liquidity-risk](https://github.com/vishnugovind10/temporal-liquidity-risk)
@@ -273,17 +194,18 @@ Citi's research page, [Digital Collateral: A Practical Reality](https://www.citi
 - [liquid-witness](https://github.com/vishnugovind10/liquid-witness)
 - [correlation-governor](https://github.com/vishnugovind10/correlation-governor)
 
+## Documentation
+
+- [Settlement control plane](docs/settlement-control-plane.md)
+- [Settlement compression](docs/settlement-compression.md)
+- [Securitisation settlement](docs/securitisation-settlement.md)
+- [T+0 architecture](docs/t0-architecture.md)
+- [Threat model](docs/threat-model.md)
+- [Limitations](LIMITATIONS.md)
+
 ## Limitations
 
-See [LIMITATIONS.md](LIMITATIONS.md). The short version: synthetic data, no real collateral, no production custody, no regulated settlement, no legal-finality engine, no bank integration, no guarantee of liquidity, no investment recommendation, no audit opinion, and no regulatory advice.
-
-## Threat model
-
-See [docs/threat-model.md](docs/threat-model.md). The model focuses on malicious operators, stale observers, dishonest counterparties, replayed evidence, tampering, inconsistent data sources, and timing manipulation.
-
-## Roadmap
-
-See [ROADMAP.md](ROADMAP.md). The roadmap is scoped to reference architecture evolution, not bank integrations.
+This is a deterministic reference implementation. It does not move real collateral, integrate with banks, establish legal finality, provide custody guarantees, issue an audit opinion, provide investment advice, or certify regulatory compliance.
 
 ## Contributing
 
@@ -296,14 +218,6 @@ See [SECURITY.md](SECURITY.md). Do not use this repository with real credentials
 ## Citation
 
 See [CITATION.cff](CITATION.cff).
-
-## Sources
-
-Source repositories are listed in [REFERENCES.md](REFERENCES.md) and [docs/source-repositories.md](docs/source-repositories.md). No source repository is vendored into this project.
-
-## Author
-
-Vishnu Govind.
 
 ## License
 

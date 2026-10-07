@@ -72,6 +72,34 @@ class EvidenceClass(StrEnum):
     BEYOND_HORIZON = "BEYOND_HORIZON"
 
 
+class ExceptionCategory(StrEnum):
+    ASSET = "ASSET"
+    CUSTODY = "CUSTODY"
+    LIQUIDITY = "LIQUIDITY"
+    STATE = "STATE"
+    SETTLEMENT = "SETTLEMENT"
+    EVIDENCE = "EVIDENCE"
+    NONE = "NONE"
+
+
+class ExceptionCode(StrEnum):
+    NONE = "NONE"
+    INELIGIBLE = "INELIGIBLE"
+    INSUFFICIENT_VALUE = "INSUFFICIENT_VALUE"
+    RESTRICTED = "RESTRICTED"
+    AUTHORIZATION_EXPIRED = "AUTHORIZATION_EXPIRED"
+    AUTHORIZATION_CONFLICT = "AUTHORIZATION_CONFLICT"
+    INSUFFICIENT_LIQUIDITY = "INSUFFICIENT_LIQUIDITY"
+    TEMPORAL_CONCENTRATION = "TEMPORAL_CONCENTRATION"
+    LEDGER_DIVERGENCE = "LEDGER_DIVERGENCE"
+    STALE_OBSERVER = "STALE_OBSERVER"
+    DVP_FAILURE = "DVP_FAILURE"
+    FINALITY_FAILURE = "FINALITY_FAILURE"
+    EVIDENCE_INCOMPLETE = "EVIDENCE_INCOMPLETE"
+    EVIDENCE_TAMPERED = "EVIDENCE_TAMPERED"
+    OBSERVATION_HORIZON_EXCEEDED = "OBSERVATION_HORIZON_EXCEEDED"
+
+
 @dataclass(frozen=True)
 class CollateralAsset:
     asset_id: str
@@ -140,6 +168,18 @@ class Scenario:
     ledgers: LedgerViews
     observer: ObserverScope
     cash_available: bool = True
+    minimum_eligible_value: int = 0
+
+
+@dataclass(frozen=True)
+class ControlException:
+    category: ExceptionCategory
+    code: ExceptionCode
+    failed_at: str
+    reason: str
+    recoverable: bool
+    escalation_required: bool
+    evidence_available: bool
 
 
 @dataclass(frozen=True)
@@ -160,7 +200,46 @@ class ScenarioResult:
     reconciliation_status: ReconciliationStatus
     evidence_status: EvidenceStatus
     reason: str
+    exception: ControlException
     evidence: dict[str, Any]
+
+
+def no_exception() -> ControlException:
+    return ControlException(
+        category=ExceptionCategory.NONE,
+        code=ExceptionCode.NONE,
+        failed_at="NONE",
+        reason="OK",
+        recoverable=False,
+        escalation_required=False,
+        evidence_available=True,
+    )
+
+
+def classify_exception(reason: str, observer: ObserverScope, evidence_status: EvidenceStatus) -> ControlException:
+    if reason == "OK":
+        return no_exception()
+    if reason == "COLLATERAL_INELIGIBLE":
+        return ControlException(ExceptionCategory.ASSET, ExceptionCode.INELIGIBLE, "ELIGIBILITY", reason, False, True, True)
+    if reason == "ELIGIBLE_VALUE_BELOW_REQUIREMENT":
+        return ControlException(ExceptionCategory.ASSET, ExceptionCode.INSUFFICIENT_VALUE, "VALUATION", reason, True, True, True)
+    if reason == "CASH_LEG_UNAVAILABLE":
+        return ControlException(ExceptionCategory.SETTLEMENT, ExceptionCode.DVP_FAILURE, "CASH_LEG", reason, True, True, True)
+    if reason == "CUSTODY_NOT_AUTHORIZED":
+        code = ExceptionCode.AUTHORIZATION_EXPIRED if not observer.evidence_complete else ExceptionCode.AUTHORIZATION_CONFLICT
+        return ControlException(ExceptionCategory.CUSTODY, code, "CUSTODY_AUTHORIZATION", reason, True, True, True)
+    if reason == "SYNCHRONIZED_LIQUIDITY_SHORTFALL":
+        return ControlException(ExceptionCategory.LIQUIDITY, ExceptionCode.TEMPORAL_CONCENTRATION, "TEMPORAL_LIQUIDITY", reason, True, True, evidence_status != EvidenceStatus.FAILED)
+    if reason == "RECONCILIATION_DIVERGENCE":
+        return ControlException(ExceptionCategory.STATE, ExceptionCode.LEDGER_DIVERGENCE, "RECONCILIATION", reason, True, True, True)
+    if reason == "EVIDENCE_INCOMPLETE":
+        code = (
+            ExceptionCode.OBSERVATION_HORIZON_EXCEEDED
+            if observer.classification == EvidenceClass.BEYOND_HORIZON
+            else ExceptionCode.EVIDENCE_INCOMPLETE
+        )
+        return ControlException(ExceptionCategory.EVIDENCE, code, "EVIDENCE", reason, True, True, False)
+    return ControlException(ExceptionCategory.SETTLEMENT, ExceptionCode.FINALITY_FAILURE, "SETTLEMENT", reason, True, True, False)
 
 
 class SettlementStateMachine:
@@ -177,7 +256,7 @@ class SettlementStateMachine:
         },
         SettlementState.COLLATERAL_ELIGIBLE: {SettlementState.ASSET_AVAILABLE},
         SettlementState.ASSET_AVAILABLE: {SettlementState.CASH_AVAILABLE, SettlementState.EXCEPTION},
-        SettlementState.CASH_AVAILABLE: {SettlementState.CUSTODY_AUTHORIZED},
+        SettlementState.CASH_AVAILABLE: {SettlementState.CUSTODY_AUTHORIZED, SettlementState.EXCEPTION},
         SettlementState.CUSTODY_AUTHORIZED: {SettlementState.SETTLEMENT_READY},
         SettlementState.SETTLEMENT_READY: {SettlementState.SETTLING, SettlementState.EXCEPTION},
         SettlementState.SETTLING: {SettlementState.FINALITY_PENDING, SettlementState.EXCEPTION},
@@ -347,6 +426,10 @@ def run_scenario(scenario: Scenario) -> ScenarioResult:
     if collateral_status != CollateralStatus.ELIGIBLE:
         machine.transition(SettlementState.EXCEPTION)
         reason = "COLLATERAL_INELIGIBLE"
+    elif eligible < scenario.minimum_eligible_value:
+        machine.transition(SettlementState.COLLATERAL_ELIGIBLE)
+        machine.transition(SettlementState.EXCEPTION)
+        reason = "ELIGIBLE_VALUE_BELOW_REQUIREMENT"
     elif not scenario.cash_available:
         machine.transition(SettlementState.COLLATERAL_ELIGIBLE)
         machine.transition(SettlementState.ASSET_AVAILABLE)
@@ -391,6 +474,7 @@ def run_scenario(scenario: Scenario) -> ScenarioResult:
             reason = "RECONCILIATION_DIVERGENCE"
 
     evidence_status = classify_evidence(machine.state, reconciliation_status, scenario.observer)
+    control_exception = classify_exception(reason, scenario.observer, evidence_status)
     raw = {
         "transaction_id": scenario.transaction_id,
         "asset_id": scenario.collateral.asset_id,
@@ -407,6 +491,8 @@ def run_scenario(scenario: Scenario) -> ScenarioResult:
         "reconciliation_status": reconciliation_status,
         "evidence_status": evidence_status,
         "evidence_classification": scenario.observer.classification,
+        "exception_category": control_exception.category,
+        "exception_code": control_exception.code,
     }
     evidence = generate_evidence({k: str(v) if isinstance(v, StrEnum) else v for k, v in raw.items()})
     return ScenarioResult(
@@ -426,6 +512,7 @@ def run_scenario(scenario: Scenario) -> ScenarioResult:
         reconciliation_status=reconciliation_status,
         evidence_status=evidence_status,
         reason=reason,
+        exception=control_exception,
         evidence=evidence,
     )
 

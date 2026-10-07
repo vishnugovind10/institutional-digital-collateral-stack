@@ -29,3 +29,7 @@ outcome = EVIDENCE_VERIFIED
 ```
 
 The balance-sheet totals are the same. Timing changes the binding constraint.
+
+## Compression context
+
+The compression experiment extends this same idea across settlement windows. Shorter windows increase temporal concentration in the synthetic model, making peak demand more important than aggregate obligation value.

@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "institutional-digital-collateral-stack"
-version = "0.1.0"
-description = "Reference architecture for 24/7 institutional digital collateral coordination."
+version = "0.2.0"
+description = "Executable institutional settlement control-plane reference architecture."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }

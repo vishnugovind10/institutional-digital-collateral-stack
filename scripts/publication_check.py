@@ -25,34 +25,30 @@ REQUIRED_FILES = [
     "docs/liquidity-model.md",
     "docs/evidence-model.md",
     "docs/source-repositories.md",
+    "docs/settlement-control-plane.md",
+    "docs/settlement-compression.md",
+    "docs/securitisation-settlement.md",
+    "docs/t0-architecture.md",
 ]
 
 README_SECTIONS = [
     "problem",
-    "why this matters",
-    "architecture diagram",
-    "what this demonstrates",
-    "what this does not demonstrate",
-    "canonical scenario",
+    "architecture",
+    "why settlement compression matters",
+    "what is implemented",
+    "securitisation scenario",
     "failure scenarios",
-    "component map",
-    "implementation status",
     "quickstart",
-    "demo output",
-    "risk / liquidity model",
-    "settlement state model",
-    "evidence model",
-    "repository composition",
-    "relationship to source repositories",
+    "control-plane summary output",
+    "exception control model",
+    "benchmark",
     "research motivation",
+    "related implementations",
+    "documentation",
     "limitations",
-    "threat model",
-    "roadmap",
     "contributing",
     "security",
     "citation",
-    "sources",
-    "author",
     "license",
 ]
 
@@ -115,6 +111,9 @@ def main() -> int:
 
     run([sys.executable, "-m", "digital_collateral.demo"])
     run([sys.executable, "-m", "digital_collateral.demo", "--scenario", "temporal-liquidity-failure"])
+    run([sys.executable, "-m", "digital_collateral.demo", "--scenario", "securitisation-settlement"])
+    run([sys.executable, "-m", "digital_collateral.demo", "--control-plane-summary"])
+    run([sys.executable, "-m", "digital_collateral.experiments.compression"])
     run([sys.executable, "-m", "pytest"])
     print("publication check passed")
     return 0

@@ -1,0 +1,30 @@
+{
+  "collateral": {
+    "asset_id": "ABS-POOL-2026-B",
+    "eligible_value": 117500000,
+    "gross_value": 125000000,
+    "haircut": 0.06,
+    "status": "ELIGIBLE"
+  },
+  "evidence": {
+    "classification": "TRUST_REQUIRED",
+    "status": "TRUST_REQUIRED"
+  },
+  "integrity_hash": "b364a37b86fd093d7fbf13b89f9fd791b1f8cae727d755ff812b448631a7dcba",
+  "liquidity": {
+    "available": 70000000,
+    "peak_demand": 80000000,
+    "required": 80000000,
+    "status": "SHORTFALL"
+  },
+  "observed_at": "2026-01-01T00:00:00Z",
+  "reconciliation": {
+    "status": "PENDING"
+  },
+  "schema_version": "0.1",
+  "settlement": {
+    "finality": "NONE",
+    "state": "EXCEPTION"
+  },
+  "transaction_id": "SEC-2026-0002"
+}

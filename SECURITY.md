@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Version `0.1.x` receives security fixes for the reference implementation.
+Version `0.2.x` receives security fixes for the reference implementation.
 
 ## Reporting
 
